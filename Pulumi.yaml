@@ -1,0 +1,4 @@
+name: CommitTrigger
+runtime: go
+description: This is a proof of concept
+config: stacks
