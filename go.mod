@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/pulumi/pulumi-aws/sdk/v5 v5.41.0
-	github.com/pulumi/pulumi/sdk/v3 v3.68.0
+	github.com/pulumi/pulumi/sdk/v3 v3.69.0
 )
 
 require (
@@ -48,6 +48,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/skeema/knownhosts v1.1.1 // indirect
+	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect

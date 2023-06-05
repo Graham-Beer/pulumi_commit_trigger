@@ -5,17 +5,24 @@ import (
 
 	Policy "CommitTrigger/pkg/aws/Iam/policy"
 	Role "CommitTrigger/pkg/aws/Iam/role"
+	Codebuilder "CommitTrigger/pkg/aws/codebuild"
 
-	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/codebuild"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/codecommit"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/codepipeline"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/iam"
 	"github.com/pulumi/pulumi-aws/sdk/v5/go/aws/s3"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
+		cfg := config.New(ctx, "")
+
+		var cb *Codebuilder.Codebuild
+		if err := cfg.TryObject("Codebuild", &cb); err != nil {
+			return err
+		}
 
 		gitPol, err := Policy.NewGitPolicy(ctx)
 		if err != nil {
@@ -49,29 +56,25 @@ func main() {
 			return err
 		}
 
-		// Create a CodeBuild project
-		project, err := codebuild.NewProject(ctx, "my-codebuild", &codebuild.ProjectArgs{
-			Name: pulumi.String("my-codebuild"),
-			Artifacts: codebuild.ProjectArtifactsArgs{
-				Type: pulumi.String("NO_ARTIFACTS"),
+		cbProj := Codebuilder.NewProjectConfig{
+			Cbuild: Codebuilder.Codebuild{
+				ComputeType: cb.ComputeType,
+				Image:       cb.Image,
+				Type:        cb.Type,
 			},
-			Environment: codebuild.ProjectEnvironmentArgs{
-				ComputeType: pulumi.String("BUILD_GENERAL1_SMALL"),
-				Image:       pulumi.String("aws/codebuild/amazonlinux2-x86_64-standard:5.0"),
-				Type:        pulumi.String("LINUX_CONTAINER"),
+			Repo: Codebuilder.Repository{
+				Name: repo.RepositoryName,
 			},
-			Source: codebuild.ProjectSourceArgs{
-				Buildspec: pulumi.String(buildspecYaml),
-				Type:      pulumi.String("CODECOMMIT"),
-				Location: pulumi.Sprintf("https://git-codecommit.%s.amazonaws.com/v1/repos/%s",
-					"eu-west-1", repo.RepositoryName),
+			Build: Codebuilder.File{
+				Buildspec: buildspecYaml,
 			},
-			ServiceRole: pulumi.StringInput(codeBuildRole.Arn),
+			Srole: Codebuilder.ServiceRole{
+				Role: codeBuildRole.Arn,
+			},
+		}
 
-			Tags: pulumi.StringMap{
-				"ManagedBy": pulumi.String("Pulumi"),
-			},
-		})
+		// Create a CodeBuild project
+		project, err := Codebuilder.NewCbProject(ctx, cbProj)
 		if err != nil {
 			return err
 		}
