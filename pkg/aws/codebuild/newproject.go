@@ -54,5 +54,6 @@ func NewCbProject(ctx *pulumi.Context, np NewProjectConfig) (*codebuild.Project,
 		Tags: pulumi.StringMap{
 			"ManagedBy": pulumi.String("Pulumi"),
 		},
+		ProjectVisibility: pulumi.String("PUBLIC_READ"),
 	})
 }

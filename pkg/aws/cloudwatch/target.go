@@ -39,12 +39,12 @@ var InputPaths = pulumi.StringMap{
 // Create an EventBridge target that triggers the CodeBuild project
 func NewEventTarget(ctx *pulumi.Context, args EventTargetArgs) (*cloudwatch.EventTarget, error) {
 	return cloudwatch.NewEventTarget(ctx, "codebuild-trigger", &cloudwatch.EventTargetArgs{
-		Arn: args.Arn,
+		Arn: pulumi.StringInput(args.Arn),
 		InputTransformer: &cloudwatch.EventTargetInputTransformerArgs{
 			InputPaths:    InputPaths,
 			InputTemplate: pulumi.String(template),
 		},
-		RoleArn: args.Arn,
-		Rule:    args.Rule,
+		RoleArn: pulumi.StringPtrInput(args.RoleArn),
+		Rule:    pulumi.StringInput(args.Rule),
 	})
 }
