@@ -24,7 +24,7 @@ func NewCodeBuildRole(ctx *pulumi.Context, policyarn pulumi.StringOutput) (*iam.
 		ManagedPolicyArns: pulumi.StringArray{
 			pulumi.String("arn:aws:iam::aws:policy/AWSCodeBuildAdminAccess"),
 			pulumi.String("arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"),
-			pulumi.String("arn:aws:iam::aws:policy/AmazonS3FullAccess"),
+			pulumi.String("arn:aws:iam::aws:policy/AWSCodeCommitFullAccess"),
 			pulumi.StringOutput(policyarn),
 		},
 	})

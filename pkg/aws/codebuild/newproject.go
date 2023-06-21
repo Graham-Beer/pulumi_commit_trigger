@@ -33,7 +33,8 @@ type NewProjectConfig struct {
 // Create a CodeBuild project
 func NewCbProject(ctx *pulumi.Context, np NewProjectConfig) (*codebuild.Project, error) {
 	return codebuild.NewProject(ctx, "my-codebuild", &codebuild.ProjectArgs{
-		Name: pulumi.String("my-codebuild"),
+		Name:         pulumi.String("my-codebuild"),
+		BadgeEnabled: pulumi.Bool(true),
 		Artifacts: codebuild.ProjectArtifactsArgs{
 			Type: pulumi.String("NO_ARTIFACTS"),
 		},

@@ -1,10 +1,7 @@
+# buildspec.yml
 version: 0.2
-
 env:
   git-credential-helper: yes
-  variables:
-    REPO: my-repo
-    BRANCH: release
 
 phases:
   install:
@@ -12,42 +9,52 @@ phases:
       golang: 1.20
     commands:
       - pip install git-remote-codecommit
-
-      # Print all environment variables (handy for AWS CodeBuild logs)
-      - env
-
+      - git config --global user.email "CodeBuild"
+      - git config --global user.name "CodeBuild CI Process"
+      - export URL=$(echo "https://git-codecommit.$region.amazonaws.com/v1/repos/$repositoryName")
+      - export sourceHead="$(echo "$sourceReference" | cut -d '/' -f3-)"
+      - export CODEBUILD_GIT_BRANCH="$(git symbolic-ref HEAD --short 2>/dev/null)"
+      - git switch $sourceHead
+      - |
+        if [[ "$sourceHead" == *"RC"* ]] ; then
+          export BUILD_NAME=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f1)
+          export BUILD_ID=$(echo $CODEBUILD_BUILD_ID | cut -d':' -f2)
+        fi
   pre_build:
     commands:
-      # Check Go version
+      - |
+        if [[ "$sourceHead" == *"RC"* ]] ; then
+            echo "Revoking approval"
+            aws codecommit update-pull-request-approval-state --pull-request-id $pullRequestId --approval-state REVOKE --revision-id $revisionId;
+        fi
+              # Check Go version
       - go version
-
-      # Clone repo
-      - git clone codecommit://${REPO} ${REPO}
-
-      # Change and view directory
-      - cd ${REPO}
-      - ls -l
-
-      # Fetch all dependencies
       - go get -t ./...
-
-      # Check the Go code for common problems with 'go vet'
-      - go vet
-
-      # Run all tests included with our application
-      - go test ./... -v
-
   build:
     commands:
+      - |
+        if [[ "$sourceHead" == *"RC"* ]] ; then
+         go vet
+         go test ./... -v
+        fi
   post_build:
     commands:
-      - echo Start post_build...
-      - git config --global user.email ${BRANCH}
-      - git config --global user.name "CodeBuild"
-      - git checkout -b ${BRANCH}
-      # - git add .
-      # - git commit -m "Commit tests passed"
-      - git tag v1.0 $(git rev-parse --short HEAD)
-      - git status
-      # - git merge main
-      - git push origin ${BRANCH} --tags
+      - export date=$(date '+%d-%m-%Y-%H%M%S')
+      - export TAG="${sourceHead}-${date}"
+      - |
+        if [ $CODEBUILD_BUILD_SUCCEEDING -eq 1 ]; then
+          aws codecommit update-pull-request-approval-state --pull-request-id $pullRequestId --approval-state APPROVE --revision-id $revisionId;
+          content="✔️  Pull request build SUCCEEDED! ![](https://codefactory-eu-west-1-prod-default-build-badges.s3-eu-west-1.amazonaws.com/passing.svg)  ![View Build]($CODEBUILD_PUBLIC_BUILD_URL)"
+          git tag -a $TAG -m "CI Tests Passed: $sourceHead"
+          git push origin $TAG
+          aws codecommit post-comment-for-pull-request --pull-request-id $pullRequestId --repository-name $repositoryName --before-commit-id $destinationCommit --after-commit-id $sourceCommit --content "$content"
+          export IsMerged=$(aws codecommit merge-pull-request-by-fast-forward --pull-request-id $pullRequestId --source-commit-id $sourceCommit --repository-name $repositoryName --query 'pullRequest.pullRequestTargets[].mergeMetadata[].isMerged' --output text)
+          if [ $IsMerged = "True" ]; then
+            aws codecommit delete-branch --repository-name $repositoryName --branch-name $sourceHead
+          fi
+        else
+          content="❌ Pull request build FAILED! ![](https://codefactory-eu-west-1-prod-default-build-badges.s3-eu-west-1.amazonaws.com/failing.svg)  ![View Build]($CODEBUILD_PUBLIC_BUILD_URL)"
+          git tag -a $TAG -m "CI Tests Failed!: $sourceHead"
+          git push origin $TAG
+          aws codecommit post-comment-for-pull-request --pull-request-id $pullRequestId --repository-name $repositoryName --before-commit-id $destinationCommit --after-commit-id $sourceCommit --content "$content"
+        fi

@@ -36,8 +36,8 @@ func NewGitPolicy(ctx *pulumi.Context) (*iam.Policy, error) {
 	}
 
 	// return generated policy
-	return iam.NewPolicy(ctx, "policy", &iam.PolicyArgs{
-		Name:        pulumi.String("GitPullPolicy"),
+	return iam.NewPolicy(ctx, "git-policy", &iam.PolicyArgs{
+		Name:        pulumi.String("GitPullPolicy2"),
 		Path:        pulumi.String("/"),
 		Description: pulumi.String("Policy to allow git pull"),
 		Policy:      pulumi.String(pol),

@@ -1,4 +1,4 @@
-name: CommitTrigger
+name: pulumi-trigger
 runtime: go
 description: This is a proof of concept
-config: stacks
+stackConfigDir: config
